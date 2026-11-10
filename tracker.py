@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import urllib.parse
 import requests
 from bs4 import BeautifulSoup
 
@@ -8,7 +9,6 @@ BOT_TOKEN = "9180642674:AAF3I1uvZjswB89NXhrCCju6AgGVt2iSg6s"
 CHAT_ID = "5384901785"
 DATA_FILE = "fiyatlar.json"
 
-# ScraperAPI Anahtarı
 SCRAPER_API_KEY = "48b2cb0a50971b43fd599eb90d82e8d0"
 
 PRODUCTS = [
@@ -59,20 +59,19 @@ def parse_price_str(raw_str):
         return None
 
 def fetch_price(item):
-    payload = {
-        "api_key": SCRAPER_API_KEY,
-        "url": item["url"],
-        "country_code": "tr"
-    }
+    # 404 hatasını önlemek için hedef linki tam URL encode yapıyoruz
+    target_url = item["url"]
+    api_url = f"http://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={urllib.parse.quote(target_url)}"
+
     try:
-        res = requests.get("https://api.scraperapi.com/", params=payload, timeout=60)
+        res = requests.get(api_url, timeout=90)
         if res.status_code != 200:
             print(f"  -> Köprü Yanıt Kodu: {res.status_code}")
             return None
 
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # 1. Schema.org JSON verisi kontrolü
+        # 1. Schema.org JSON-LD verisi kontrolü
         scripts = soup.find_all("script", type="application/ld+json")
         for s in scripts:
             if not s.string:
