@@ -8,57 +8,25 @@ BOT_TOKEN = "9180642674:AAF3I1uvZjswB89NXhrCCju6AgGVt2iSg6s"
 CHAT_ID = "5384901785"
 DATA_FILE = "fiyatlar.json"
 
+# Akakçe ve Cimri doğrudan tüm pazar yerlerinin en ucuzunu tek sayfada verir
 PRODUCTS = [
     {
-        "id": "mm_s12_gri",
-        "name": "MediaMarkt - Tab S12 Ultra (Gri)",
-        "site": "mediamarkt",
-        "url": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-tab-s12-ultra-12256gb-tam-dokunmatik-tablet-gri-1257344.html"
+        "id": "akakce_s12_ultra",
+        "name": "Akakçe - Galaxy Tab S12 Ultra (En Dip Fiyat)",
+        "site": "akakce",
+        "url": "https://www.akakce.com/tablet/en-ucuz-samsung-galaxy-tab-s12-ultra-fiyati,0.html"
     },
     {
-        "id": "mm_s12_gumus",
-        "name": "MediaMarkt - Tab S12 Ultra (Gümüş)",
-        "site": "mediamarkt",
-        "url": "https://www.mediamarkt.com.tr/tr/product/_samsung-galaxy-tab-s12-ultra-12256gb-tam-dokunmatik-tablet-gumus-1257345.html"
-    },
-    {
-        "id": "hb_s12_gri",
-        "name": "Hepsiburada - Tab S12 Ultra (Gri)",
-        "site": "hepsiburada",
-        "url": "https://www.hepsiburada.com/samsung-galaxy-tab-s12-ultra-12gb-ram-256gb-depolama-alani-14-6-inc-120hz-ekran-wifi7-s-pen-dahil-gri-p-HBCV0000JR1GE2"
-    },
-    {
-        "id": "hb_s12_gumus",
-        "name": "Hepsiburada - Tab S12 Ultra (Gümüş)",
-        "site": "hepsiburada",
-        "url": "https://www.hepsiburada.com/samsung-galaxy-tab-s12-ultra-12gb-ram-256gb-depolama-alani-14-6-inc-120hz-ekran-wifi7-s-pen-dahil-gumus-p-HBCV0000JR1UHB"
-    },
-    {
-        "id": "ty_s12_gumus",
-        "name": "Trendyol - Tab S12 Ultra (Gümüş)",
-        "site": "trendyol",
-        "url": "https://www.trendyol.com/samsung/galaxy-tab-s12-ultra-12gb-256gb-gumus-tablet-p-1207753922"
-    },
-    {
-        "id": "ty_s12_gri",
-        "name": "Trendyol - Tab S12 Ultra (Gri)",
-        "site": "trendyol",
-        "url": "https://www.trendyol.com/samsung/galaxy-tab-s12-ultra-12gb-256gb-gri-tablet-p-1207753924"
-    },
-    {
-        "id": "n11_s12_genel",
-        "name": "N11 - Tab S12 Ultra (En Uygun Satıcı)",
-        "site": "n11",
-        "url": "https://www.n11.com/urun/samsung-galaxy-tab-s12-ultra-12-gb-256-gb-146-tablet-141574467"
+        "id": "cimri_s12_ultra",
+        "name": "Cimri - Galaxy Tab S12 Ultra (En Dip Fiyat)",
+        "site": "cimri",
+        "url": "https://www.cimri.com/tablet-pc/en-ucuz-samsung-galaxy-tab-s12-ultra-fiyatlari"
     }
 ]
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
-    "Cache-Control": "no-cache",
-    "Pragma": "no-cache",
+    "Accept-Language": "tr-TR,tr;q=0.9",
 }
 
 def send_telegram(text):
@@ -74,52 +42,47 @@ def send_telegram(text):
     except Exception as e:
         print(f"Telegram hatası: {e}")
 
-def parse_price(html_text):
-    """HTML içindeki Schema.org JSON-LD veya gizli metadata fiyat etiketlerini bulur."""
-    # 1. Regex ile "price": 64999 veya "price":"64999.00" arayışı
-    matches = re.findall(r'"price"\s*:\s*"?([\d\.,]+)"?', html_text)
-    valid_prices = []
-    for m in matches:
-        clean = m.replace(".", "").replace(",", ".")
-        try:
-            val = float(clean)
-            if 10000 < val < 200000:  # Tablet fiyat aralığına uygun olanları filtreler
-                valid_prices.append(val)
-        except ValueError:
-            continue
-    if valid_prices:
-        return min(valid_prices)
-
-    # 2. JSON-LD bloklarını ayrıştırma
-    soup = BeautifulSoup(html_text, "html.parser")
-    for script in soup.find_all("script", type="application/ld+json"):
-        try:
-            data = json.loads(script.string)
-            if isinstance(data, list):
-                data = data[0]
-            offers = data.get("offers", {})
-            if isinstance(offers, list):
-                offers = offers[0]
-            raw_p = offers.get("price") or offers.get("lowPrice")
-            if raw_p:
-                return float(str(raw_p).replace(",", "."))
-        except Exception:
-            continue
-
-    return None
+def parse_price_str(raw_str):
+    if not raw_str:
+        return None
+    clean = re.sub(r"[^\d,\.]", "", raw_str).strip()
+    if "," in clean and "." in clean:
+        clean = clean.replace(".", "").replace(",", ".")
+    elif "," in clean:
+        clean = clean.replace(",", ".")
+    try:
+        return float(clean)
+    except ValueError:
+        return None
 
 def fetch_price(item):
-    session = requests.Session()
-    session.headers.update(HEADERS)
     try:
-        res = session.get(item["url"], timeout=20)
-        if res.status_code == 200:
-            return parse_price(res.text)
-        else:
-            print(f"  -> HTTP Durum Kodu: {res.status_code}")
+        res = requests.get(item["url"], headers=HEADERS, timeout=20)
+        if res.status_code != 200:
+            print(f"  -> HTTP Durum: {res.status_code}")
+            return None, None
+
+        soup = BeautifulSoup(res.text, "html.parser")
+        
+        # Akakçe en ucuz fiyat ve satıcı yakalama
+        if item["site"] == "akakce":
+            price_el = soup.select_one("span.pt_v8, span.prc, .pt_v9, span[data-pr]")
+            seller_el = soup.select_one("span.v_v8, .seller_name, span[class*='seller']")
+            seller = seller_el.get_text(strip=True) if seller_el else "En Ucuz Mağaza"
+            if price_el:
+                return parse_price_str(price_el.get_text()), seller
+
+        # Cimri en ucuz fiyat ve satıcı yakalama
+        elif item["site"] == "cimri":
+            price_el = soup.select_one("span[class*='Price'], .s1wytv2f-1, div[class*='price']")
+            seller_el = soup.select_one("span[class*='Merchant'], span[class*='seller']")
+            seller = seller_el.get_text(strip=True) if seller_el else "En Ucuz Mağaza"
+            if price_el:
+                return parse_price_str(price_el.get_text()), seller
+
     except Exception as e:
-        print(f"  -> İstek hatası: {e}")
-    return None
+        print(f"  -> Hata: {e}")
+    return None, None
 
 def main():
     history = {}
@@ -130,34 +93,38 @@ def main():
             except Exception:
                 history = {}
 
-    summary_list = []
-
     for item in PRODUCTS:
         print(f"Kontrol ediliyor: {item['name']}")
-        price = fetch_price(item)
+        price, seller = fetch_price(item)
 
-        if price is None:
+        if not price:
             print("  -> Fiyat okunamadı.")
             continue
 
         old_price = history.get(item["id"])
-        print(f"  -> Bulunan: {price:,.2f} TL (Önceki: {old_price})")
-        summary_list.append(f"• *{item['name']}*: `{price:,.2f} TL`")
+        print(f"  -> En Ucuz Fiyat: {price:,.2f} TL | Satıcı: {seller} (Önceki: {old_price})")
 
         if old_price is None:
             history[item["id"]] = price
-            msg = f"📌 *Fiyat Takibi Başlatıldı*\n*{item['name']}*\nİlk Fiyat: `{price:,.2f} TL`\n[Ürüne Git]({item['url']})"
+            msg = (
+                f"📌 *Fiyat Takibi Başlatıldı*\n"
+                f"*{item['name']}*\n"
+                f"💰 En Dip Fiyat: `{price:,.2f} TL`\n"
+                f"🏬 Satıcı: {seller}\n"
+                f"[Fiyatları Gör ve Satıcıya Git]({item['url']})"
+            )
             send_telegram(msg)
         elif price < old_price:
             diff = old_price - price
             history[item["id"]] = price
             msg = (
-                f"🚨 *FİYAT DÜŞTÜ!*\n"
+                f"🚨 *YENİ EN DİP FİYAT!*\n"
                 f"*{item['name']}*\n"
-                f"Eski: ~{old_price:,.2f} TL~\n"
-                f"Yeni: *{price:,.2f} TL*\n"
-                f"İndirim: `{diff:,.2f} TL`\n"
-                f"[Ürüne Git]({item['url']})"
+                f"Eski Fiyat: ~{old_price:,.2f} TL~\n"
+                f"Yeni En Dip Fiyat: *{price:,.2f} TL*\n"
+                f"İndirim: `{diff:,.2f} TL` ucuzladı!\n"
+                f"🏬 Satıcı: {seller}\n"
+                f"[Hemen Satıcıya Git]({item['url']})"
             )
             send_telegram(msg)
         elif price > old_price:
