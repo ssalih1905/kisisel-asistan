@@ -22,7 +22,7 @@ jobs:
 
       - name: Paketleri Kur
         run: |
-          pip install requests
+          pip install curl_cffi beautifulsoup4 requests
 
       - name: Fiyatlari Kontrol Et
         run: python tracker.py
