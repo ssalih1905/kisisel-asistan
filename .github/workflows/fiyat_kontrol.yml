@@ -2,6 +2,7 @@ name: Fiyat Kontrolü
 
 on:
   schedule:
+    # Her 3 saatte bir otomatik çalışır
     - cron: '0 */3 * * *'
   workflow_dispatch:
 
@@ -20,9 +21,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Paketleri Kur
+      - name: Gerekli Paketleri Kur
         run: |
-          pip install curl_cffi beautifulsoup4 requests
+          pip install requests beautifulsoup4
 
       - name: Fiyatlari Kontrol Et
         run: python tracker.py
