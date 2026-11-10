@@ -59,7 +59,6 @@ def parse_price_str(raw_str):
         return None
 
 def fetch_price(item):
-    # 404 hatasını önlemek için hedef linki tam URL encode yapıyoruz
     target_url = item["url"]
     api_url = f"http://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={urllib.parse.quote(target_url)}"
 
@@ -71,7 +70,22 @@ def fetch_price(item):
 
         soup = BeautifulSoup(res.text, "html.parser")
 
-        # 1. Schema.org JSON-LD verisi kontrolü
+        # 1. Hepsiburada İçin Özel: __NEXT_DATA__ JSON ayrıştırma (En Garantili Yol)
+        if item["site"] == "hepsiburada":
+            next_script = soup.find("script", id="__NEXT_DATA__")
+            if next_script and next_script.string:
+                try:
+                    data = json.loads(next_script.string)
+                    # Hepsiburada Next.js veri ağacında fiyatı tarar
+                    raw_text = next_script.string
+                    prices = re.findall(r'"price"\s*:\s*([\d\.]+)', raw_text)
+                    valid_prices = [float(p) for p in prices if 40000 < float(p) < 150000]
+                    if valid_prices:
+                        return min(valid_prices)
+                except Exception as e:
+                    print(f"  -> Next Data hatası: {e}")
+
+        # 2. Schema.org JSON-LD verisi kontrolü (N11 ve genel)
         scripts = soup.find_all("script", type="application/ld+json")
         for s in scripts:
             if not s.string:
@@ -89,7 +103,7 @@ def fetch_price(item):
             except Exception:
                 continue
 
-        # 2. HTML CSS etiket kontrolü
+        # 3. HTML CSS etiket kontrolü
         if item["site"] == "hepsiburada":
             el = soup.select_one("[data-test-id='default-price'], span[class*='price'], div[class*='PriceContainer']")
             if el:
