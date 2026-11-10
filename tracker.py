@@ -60,12 +60,12 @@ def parse_price_str(raw_str):
 
 def fetch_price(item):
     payload = {
-        'api_key': SCRAPER_API_KEY,
-        'url': item["url"],
-        'country_code': 'tr'
+        "api_key": SCRAPER_API_KEY,
+        "url": item["url"],
+        "country_code": "tr"
     }
     try:
-        res = requests.get('https://api.scraperapi.com/', params=payload, timeout=60)
+        res = requests.get("https://api.scraperapi.com/", params=payload, timeout=60)
         if res.status_code != 200:
             print(f"  -> Köprü Yanıt Kodu: {res.status_code}")
             return None
@@ -73,4 +73,83 @@ def fetch_price(item):
         soup = BeautifulSoup(res.text, "html.parser")
 
         # 1. Schema.org JSON verisi kontrolü
-        for s in soup.find_all("script", type="application/ld+json"):
+        scripts = soup.find_all("script", type="application/ld+json")
+        for s in scripts:
+            if not s.string:
+                continue
+            try:
+                data = json.loads(s.string)
+                if isinstance(data, list):
+                    data = data[0]
+                offers = data.get("offers", {})
+                if isinstance(offers, list):
+                    offers = offers[0]
+                price = offers.get("price") or offers.get("lowPrice")
+                if price:
+                    return float(str(price).replace(",", "."))
+            except Exception:
+                continue
+
+        # 2. HTML CSS etiket kontrolü
+        if item["site"] == "hepsiburada":
+            el = soup.select_one("[data-test-id='default-price'], span[class*='price'], div[class*='PriceContainer']")
+            if el:
+                return parse_price_str(el.get_text())
+        elif item["site"] == "n11":
+            el = soup.select_one(".newPrice ins, .unf-p-summary-price, .priceDetail ins")
+            if el:
+                return parse_price_str(el.get_text())
+
+    except Exception as e:
+        print(f"  -> İstek hatası: {e}")
+    return None
+
+def main():
+    history = {}
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            try:
+                history = json.load(f)
+            except Exception:
+                history = {}
+
+    for item in PRODUCTS:
+        print(f"Kontrol ediliyor: {item['name']}")
+        price = fetch_price(item)
+
+        if not price:
+            print("  -> Fiyat okunamadı.")
+            continue
+
+        old_price = history.get(item["id"])
+        print(f"  -> Bulunan Fiyat: {price:,.2f} TL (Önceki: {old_price})")
+
+        if old_price is None:
+            history[item["id"]] = price
+            msg = (
+                f"📌 *Fiyat Takibi Başlatıldı*\n"
+                f"📱 *{item['name']}*\n"
+                f"💰 Güncel Fiyat: `{price:,.2f} TL`\n"
+                f"[Ürüne Git]({item['url']})"
+            )
+            send_telegram(msg)
+        elif price < old_price:
+            diff = old_price - price
+            history[item["id"]] = price
+            msg = (
+                f"🚨 *FİYAT DÜŞTÜ!*\n"
+                f"📱 *{item['name']}*\n"
+                f"Eski: ~{old_price:,.2f} TL~\n"
+                f"Yeni: *{price:,.2f} TL*\n"
+                f"İndirim: `{diff:,.2f} TL` düştü!\n"
+                f"[Hemen Satın Al]({item['url']})"
+            )
+            send_telegram(msg)
+        elif price > old_price:
+            history[item["id"]] = price
+
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
+
+if __name__ == "__main__":
+    main()
