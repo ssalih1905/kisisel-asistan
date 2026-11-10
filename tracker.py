@@ -2,7 +2,7 @@ import json
 import os
 import re
 import requests
-from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
 
 BOT_TOKEN = "9180642674:AAF3I1uvZjswB89NXhrCCju6AgGVt2iSg6s"
 CHAT_ID = "5384901785"
@@ -53,6 +53,14 @@ PRODUCTS = [
     }
 ]
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+}
+
 def send_telegram(text):
     api_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
@@ -66,43 +74,52 @@ def send_telegram(text):
     except Exception as e:
         print(f"Telegram hatası: {e}")
 
-def parse_price_str(raw_str):
-    if not raw_str:
-        return None
-    clean = re.sub(r"[^\d,\.]", "", raw_str).strip()
-    if "," in clean and "." in clean:
-        clean = clean.replace(".", "").replace(",", ".")
-    elif "," in clean:
-        clean = clean.replace(",", ".")
+def parse_price(html_text):
+    """HTML içindeki Schema.org JSON-LD veya gizli metadata fiyat etiketlerini bulur."""
+    # 1. Regex ile "price": 64999 veya "price":"64999.00" arayışı
+    matches = re.findall(r'"price"\s*:\s*"?([\d\.,]+)"?', html_text)
+    valid_prices = []
+    for m in matches:
+        clean = m.replace(".", "").replace(",", ".")
+        try:
+            val = float(clean)
+            if 10000 < val < 200000:  # Tablet fiyat aralığına uygun olanları filtreler
+                valid_prices.append(val)
+        except ValueError:
+            continue
+    if valid_prices:
+        return min(valid_prices)
+
+    # 2. JSON-LD bloklarını ayrıştırma
+    soup = BeautifulSoup(html_text, "html.parser")
+    for script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(script.string)
+            if isinstance(data, list):
+                data = data[0]
+            offers = data.get("offers", {})
+            if isinstance(offers, list):
+                offers = offers[0]
+            raw_p = offers.get("price") or offers.get("lowPrice")
+            if raw_p:
+                return float(str(raw_p).replace(",", "."))
+        except Exception:
+            continue
+
+    return None
+
+def fetch_price(item):
+    session = requests.Session()
+    session.headers.update(HEADERS)
     try:
-        return float(clean)
-    except ValueError:
-        return None
-
-def fetch_price(page, item):
-    page.goto(item["url"], wait_until="domcontentloaded", timeout=40000)
-    page.wait_for_timeout(3000)
-    site = item["site"]
-    price_val = None
-
-    if site == "hepsiburada":
-        el = page.query_selector("[data-test-id='default-price'], [data-test-id='price-current-price'], span[class*='price']")
-        if el:
-            price_val = parse_price_str(el.inner_text())
-    elif site == "trendyol":
-        el = page.query_selector(".prc-dsc, span.discounted, .product-price-container")
-        if el:
-            price_val = parse_price_str(el.inner_text())
-    elif site == "mediamarkt":
-        el = page.query_selector("span[data-test='branded-price-whole'], [class*='Pricestyled']")
-        if el:
-            price_val = parse_price_str(el.inner_text())
-    elif site == "n11":
-        el = page.query_selector(".newPrice ins, .unf-p-summary-price, .priceDetail ins")
-        if el:
-            price_val = parse_price_str(el.inner_text())
-
-    return price_val
+        res = session.get(item["url"], timeout=20)
+        if res.status_code == 200:
+            return parse_price(res.text)
+        else:
+            print(f"  -> HTTP Durum Kodu: {res.status_code}")
+    except Exception as e:
+        print(f"  -> İstek hatası: {e}")
+    return None
 
 def main():
     history = {}
@@ -113,48 +130,38 @@ def main():
             except Exception:
                 history = {}
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-        )
-        page = context.new_page()
+    summary_list = []
 
-        for item in PRODUCTS:
-            try:
-                print(f"Kontrol ediliyor: {item['name']}")
-                price = fetch_price(page, item)
-                
-                if price is None:
-                    print("  -> Fiyat okunamadı.")
-                    continue
+    for item in PRODUCTS:
+        print(f"Kontrol ediliyor: {item['name']}")
+        price = fetch_price(item)
 
-                old_price = history.get(item["id"])
-                print(f"  -> Bulunan: {price:,.2f} TL (Önceki: {old_price})")
+        if price is None:
+            print("  -> Fiyat okunamadı.")
+            continue
 
-                if old_price is None:
-                    history[item["id"]] = price
-                    msg = f"📌 *Fiyat Takibi Başlatıldı*\n*{item['name']}*\nBaşlangıç Fiyatı: `{price:,.2f} TL`\n[Ürüne Git]({item['url']})"
-                    send_telegram(msg)
-                elif price < old_price:
-                    diff = old_price - price
-                    history[item["id"]] = price
-                    msg = (
-                        f"🚨 *FİYAT DÜŞTÜ!*\n"
-                        f"*{item['name']}*\n"
-                        f"Eski: ~{old_price:,.2f} TL~\n"
-                        f"Yeni: *{price:,.2f} TL*\n"
-                        f"İndirim: `{diff:,.2f} TL`\n"
-                        f"[Ürüne Git]({item['url']})"
-                    )
-                    send_telegram(msg)
-                elif price > old_price:
-                    history[item["id"]] = price
+        old_price = history.get(item["id"])
+        print(f"  -> Bulunan: {price:,.2f} TL (Önceki: {old_price})")
+        summary_list.append(f"• *{item['name']}*: `{price:,.2f} TL`")
 
-            except Exception as e:
-                print(f"Hata ({item['name']}): {e}")
-
-        browser.close()
+        if old_price is None:
+            history[item["id"]] = price
+            msg = f"📌 *Fiyat Takibi Başlatıldı*\n*{item['name']}*\nİlk Fiyat: `{price:,.2f} TL`\n[Ürüne Git]({item['url']})"
+            send_telegram(msg)
+        elif price < old_price:
+            diff = old_price - price
+            history[item["id"]] = price
+            msg = (
+                f"🚨 *FİYAT DÜŞTÜ!*\n"
+                f"*{item['name']}*\n"
+                f"Eski: ~{old_price:,.2f} TL~\n"
+                f"Yeni: *{price:,.2f} TL*\n"
+                f"İndirim: `{diff:,.2f} TL`\n"
+                f"[Ürüne Git]({item['url']})"
+            )
+            send_telegram(msg)
+        elif price > old_price:
+            history[item["id"]] = price
 
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
