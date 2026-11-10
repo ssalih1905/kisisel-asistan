@@ -37,19 +37,19 @@ PRODUCTS = [
         "id": "ty_s12_gumus",
         "name": "Trendyol - Tab S12 Ultra (Gümüş)",
         "site": "trendyol",
-        "url": "https://www.trendyol.com/samsung/galaxy-tab-s12-ultra-12gb-256gb-gumus-tablet-p-1207753922?boutiqueId=689770&merchantId=968"
+        "url": "https://www.trendyol.com/samsung/galaxy-tab-s12-ultra-12gb-256gb-gumus-tablet-p-1207753922"
     },
     {
         "id": "ty_s12_gri",
         "name": "Trendyol - Tab S12 Ultra (Gri)",
         "site": "trendyol",
-        "url": "https://www.trendyol.com/samsung/galaxy-tab-s12-ultra-12gb-256gb-gri-tablet-p-1207753924?boutiqueId=689770&merchantId=968"
+        "url": "https://www.trendyol.com/samsung/galaxy-tab-s12-ultra-12gb-256gb-gri-tablet-p-1207753924"
     },
     {
-        "id": "n11_s12_gumus",
-        "name": "N11 - Tab S12 Ultra (Gümüş)",
+        "id": "n11_s12_genel",
+        "name": "N11 - Tab S12 Ultra (En Uygun Satıcı)",
         "site": "n11",
-        "url": "https://www.n11.com/urun/samsung-galaxy-tab-s12-ultra-12-gb-256-gb-146-tablet-141574467?magaza=scenter&renk=gumus"
+        "url": "https://www.n11.com/urun/samsung-galaxy-tab-s12-ultra-12-gb-256-gb-146-tablet-141574467"
     }
 ]
 
@@ -80,7 +80,7 @@ def parse_price_str(raw_str):
         return None
 
 def fetch_price(page, item):
-    page.goto(item["url"], wait_until="domcontentloaded", timeout=35000)
+    page.goto(item["url"], wait_until="domcontentloaded", timeout=40000)
     page.wait_for_timeout(3000)
     site = item["site"]
     price_val = None
@@ -130,7 +130,7 @@ def main():
                     continue
 
                 old_price = history.get(item["id"])
-                print(f"  -> Bulunan: {price} TL (Önceki: {old_price})")
+                print(f"  -> Bulunan: {price:,.2f} TL (Önceki: {old_price})")
 
                 if old_price is None:
                     history[item["id"]] = price
