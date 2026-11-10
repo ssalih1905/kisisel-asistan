@@ -23,8 +23,7 @@ jobs:
 
       - name: Gerekli Paketleri Kur
         run: |
-          pip install playwright requests
-          playwright install chromium
+          pip install requests beautifulsoup4
 
       - name: Fiyatları Kontrol Et
         run: python tracker.py
