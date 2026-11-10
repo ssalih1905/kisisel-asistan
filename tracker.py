@@ -54,13 +54,19 @@ def parse_price_str(raw_str):
     elif "," in clean:
         clean = clean.replace(",", ".")
     try:
-        return float(clean)
+        val = float(clean)
+        return val if 30000 < val < 200000 else None
     except ValueError:
         return None
 
 def fetch_price(item):
     target_url = item["url"]
-    api_url = f"http://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={urllib.parse.quote(target_url)}"
+    
+    # Hepsiburada JS render istediği için render=true ekliyoruz, N11 için düz istek yetiyor
+    if item["site"] == "hepsiburada":
+        api_url = f"http://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={urllib.parse.quote(target_url)}&render=true"
+    else:
+        api_url = f"http://api.scraperapi.com/?api_key={SCRAPER_API_KEY}&url={urllib.parse.quote(target_url)}"
 
     try:
         res = requests.get(api_url, timeout=90)
@@ -68,24 +74,32 @@ def fetch_price(item):
             print(f"  -> Köprü Yanıt Kodu: {res.status_code}")
             return None
 
-        soup = BeautifulSoup(res.text, "html.parser")
+        html_text = res.text
+        soup = BeautifulSoup(html_text, "html.parser")
 
-        # 1. Hepsiburada İçin Özel: __NEXT_DATA__ JSON ayrıştırma (En Garantili Yol)
+        # 1. Hepsiburada DOM ve Veri Alanı Taraması
         if item["site"] == "hepsiburada":
-            next_script = soup.find("script", id="__NEXT_DATA__")
-            if next_script and next_script.string:
-                try:
-                    data = json.loads(next_script.string)
-                    # Hepsiburada Next.js veri ağacında fiyatı tarar
-                    raw_text = next_script.string
-                    prices = re.findall(r'"price"\s*:\s*([\d\.]+)', raw_text)
-                    valid_prices = [float(p) for p in prices if 40000 < float(p) < 150000]
-                    if valid_prices:
-                        return min(valid_prices)
-                except Exception as e:
-                    print(f"  -> Next Data hatası: {e}")
+            # JS ile render edilmiş DOM elemanları
+            selectors = [
+                "[data-test-id='default-price']",
+                "[data-test-id='price-current-price']",
+                "span[class*='price']",
+                "div[class*='PriceContainer'] span",
+                "span.price-item"
+            ]
+            for sel in selectors:
+                for el in soup.select(sel):
+                    val = parse_price_str(el.get_text())
+                    if val:
+                        return val
 
-        # 2. Schema.org JSON-LD verisi kontrolü (N11 ve genel)
+            # Sayfa içi JSON state verilerini arama (Next.js state objesi)
+            price_matches = re.findall(r'"(?:price|sellingPrice|currentPrice|customerPrice)"\s*:\s*([\d\.]+)', html_text)
+            valid = [float(p) for p in price_matches if 40000 < float(p) < 150000]
+            if valid:
+                return min(valid)
+
+        # 2. N11 ve Genel Schema.org JSON-LD Taraması
         scripts = soup.find_all("script", type="application/ld+json")
         for s in scripts:
             if not s.string:
@@ -97,72 +111,14 @@ def fetch_price(item):
                 offers = data.get("offers", {})
                 if isinstance(offers, list):
                     offers = offers[0]
-                price = offers.get("price") or offers.get("lowPrice")
-                if price:
-                    return float(str(price).replace(",", "."))
+                raw_p = offers.get("price") or offers.get("lowPrice")
+                if raw_p:
+                    val = float(str(raw_p).replace(",", "."))
+                    if 30000 < val < 200000:
+                        return val
             except Exception:
                 continue
 
-        # 3. HTML CSS etiket kontrolü
-        if item["site"] == "hepsiburada":
-            el = soup.select_one("[data-test-id='default-price'], span[class*='price'], div[class*='PriceContainer']")
-            if el:
-                return parse_price_str(el.get_text())
-        elif item["site"] == "n11":
-            el = soup.select_one(".newPrice ins, .unf-p-summary-price, .priceDetail ins")
-            if el:
-                return parse_price_str(el.get_text())
-
-    except Exception as e:
-        print(f"  -> İstek hatası: {e}")
-    return None
-
-def main():
-    history = {}
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            try:
-                history = json.load(f)
-            except Exception:
-                history = {}
-
-    for item in PRODUCTS:
-        print(f"Kontrol ediliyor: {item['name']}")
-        price = fetch_price(item)
-
-        if not price:
-            print("  -> Fiyat okunamadı.")
-            continue
-
-        old_price = history.get(item["id"])
-        print(f"  -> Bulunan Fiyat: {price:,.2f} TL (Önceki: {old_price})")
-
-        if old_price is None:
-            history[item["id"]] = price
-            msg = (
-                f"📌 *Fiyat Takibi Başlatıldı*\n"
-                f"📱 *{item['name']}*\n"
-                f"💰 Güncel Fiyat: `{price:,.2f} TL`\n"
-                f"[Ürüne Git]({item['url']})"
-            )
-            send_telegram(msg)
-        elif price < old_price:
-            diff = old_price - price
-            history[item["id"]] = price
-            msg = (
-                f"🚨 *FİYAT DÜŞTÜ!*\n"
-                f"📱 *{item['name']}*\n"
-                f"Eski: ~{old_price:,.2f} TL~\n"
-                f"Yeni: *{price:,.2f} TL*\n"
-                f"İndirim: `{diff:,.2f} TL` düştü!\n"
-                f"[Hemen Satın Al]({item['url']})"
-            )
-            send_telegram(msg)
-        elif price > old_price:
-            history[item["id"]] = price
-
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
-
-if __name__ == "__main__":
-    main()
+        # 3. N11 HTML CSS Seçicileri
+        if item["site"] == "n11":
+            el = soup.select_
