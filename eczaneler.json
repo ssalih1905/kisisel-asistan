@@ -1,5 +1,96 @@
 {
-  "guncelleme": "2026-11-12 14:21",
-  "kayit_sayisi": 0,
-  "liste": []
+  "guncelleme": "2026-11-12 14:24",
+  "kayit_sayisi": 10,
+  "liste": [
+    {
+      "ilce": "Adalar",
+      "ad": "Adalar Merkez Eczanesi",
+      "adres": "Adres : Nizam Mahallesi, 23 Nisan Caddesi, 12 Telefon: +9",
+      "tarif": "",
+      "tel": "02163826392",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Adalar",
+      "ad": "Adalar Hayat Eczanesi",
+      "adres": "Adres : Heybeliada Mahallesi, Ayyıldız Caddesi, 43 Telefon",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Adalar",
+      "ad": "Merkez Eczanesi",
+      "adres": "— Adalar&#x27;da bugün nöbetçi eczane . Adalar bölgesinde hizmet veriyor. Telefon",
+      "tarif": "",
+      "tel": "0216 382 6392",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Adalar",
+      "ad": "Büyükada Eczanesi",
+      "adres": "Adalar Maden Mahallesi Çınar Caddesi No:4/A Büyükada Adalar İstanbul Yol Tarifi Al",
+      "tarif": "",
+      "tel": "0 (216) 382 67 56",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Arnavutköy",
+      "ad": "İrem Eczanesi",
+      "adres": "— Arnavutköy&#x27;de bugün nöbetçi eczane . Arnavutköy bölgesinde hizmet veriyor. Telefon",
+      "tarif": "",
+      "tel": "0212 597 5600",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Arnavutköy",
+      "ad": "Çiçek Eczanesi",
+      "adres": "— İstanbul Arnavutköy nöbetçi eczane . Adres : Mustafa Kemal Paşa Mahallesi, Fatih Caddesi, No: 183/A, Arnavutköy . Tel",
+      "tarif": "",
+      "tel": "05523895129",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Ataşehir",
+      "ad": "Evren Eczanesi",
+      "adres": "Gazi Eczanesi , Hülyam Eczanesi . Adres , telefon, yol tarifi ve size en yakın açık eczane",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Ataşehir",
+      "ad": "Gazi Eczanesi",
+      "adres": "Hülyam Eczanesi . Adres , telefon, yol tarifi ve size en yakın açık eczane",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Ataşehir",
+      "ad": "Hülyam Eczanesi",
+      "adres": "Adres , telefon, yol tarifi ve size en yakın açık eczane",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Ataşehir",
+      "ad": "Prime Eczanesi",
+      "adres": "Ataşehir Yenisahra Mahallesi, Karaman Cad., No:1/1 O (6 Nolu Dükkan) Ataşehir İstanbul Yol Tarifi Al",
+      "tarif": "",
+      "tel": "0 (216) 610 11 11",
+      "lat": "",
+      "lon": ""
+    }
+  ]
 }
