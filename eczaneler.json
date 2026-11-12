@@ -1,42 +1,5 @@
 {
-  "guncelleme": "2026-11-12 15:02",
-  "kayit_sayisi": 4,
-  "liste": [
-    {
-      "ilce": "Beykoz",
-      "ad": "Vildan Eczanesi",
-      "adres": "Beykoz / İstanbul",
-      "tarif": "",
-      "tel": "",
-      "lat": "",
-      "lon": ""
-    },
-    {
-      "ilce": "Beykoz",
-      "ad": "Karadeniz Eczanesi",
-      "adres": "Beykoz / İstanbul",
-      "tarif": "",
-      "tel": "",
-      "lat": "",
-      "lon": ""
-    },
-    {
-      "ilce": "Beykoz",
-      "ad": "Elif Burçak Eczanesi",
-      "adres": "Beykoz / İstanbul",
-      "tarif": "",
-      "tel": "",
-      "lat": "",
-      "lon": ""
-    },
-    {
-      "ilce": "Beykoz",
-      "ad": "Paşabahçe Eczanesi",
-      "adres": "iletişim, adres, çalışma saatleri ve yol tarifi. Beykoz için 7/24 nöbetçi eczane hizmeti",
-      "tarif": "",
-      "tel": "",
-      "lat": "",
-      "lon": ""
-    }
-  ]
+  "guncelleme": "2026-11-12 15:51",
+  "kayit_sayisi": 0,
+  "liste": []
 }
