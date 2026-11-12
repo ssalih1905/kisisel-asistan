@@ -1,12 +1,18 @@
 {
-  "guncelleme": "2026-11-12 16:03",
-  "kayit_sayisi": 1,
+  "guncelleme": "2026-11-12 16:06",
+  "kayit_sayisi": 2,
   "liste": [
     {
       "ilce": "Beykoz",
-      "ad": "elefon ve konumları Topkar Eczanesi",
-      "adres": "Beykoz Soğuksu Mahallesi, Mehmet Akif Ersoy Caddesi, 103/A Beykoz İstanbul  Al",
-      "tel": "0 (216) 413 06 17"
+      "ad": "Paşabahçe Eczanesi",
+      "adres": "İstanbul / Beykoz Adres Paşabahçe Mahallesi Beyaz Erguvan Caddesi 46/A +9",
+      "tel": "02163310074"
+    },
+    {
+      "ilce": "Beykoz",
+      "ad": "902163310074 Kanuni Eczanesi",
+      "adres": "İstanbul / Beykoz Adres Atakent Mahallesi 221. Sokak C18 +9",
+      "tel": "05324548780"
     }
   ]
 }
