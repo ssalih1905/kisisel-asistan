@@ -1,10 +1,10 @@
 {
-  "guncelleme": "2026-11-12 14:28",
-  "kayit_sayisi": 2,
+  "guncelleme": "2026-11-12 15:02",
+  "kayit_sayisi": 4,
   "liste": [
     {
       "ilce": "Beykoz",
-      "ad": "Topkar Eczanesi",
+      "ad": "Vildan Eczanesi",
       "adres": "Beykoz / İstanbul",
       "tarif": "",
       "tel": "",
@@ -13,8 +13,26 @@
     },
     {
       "ilce": "Beykoz",
-      "ad": "Eczane Vildan Eczanesi",
-      "adres": "(1,4 km), Su Eczanesi (2,9 km). Kavacık , Beykoz çevresinde açık eczane adres , telefon ve yol tarifi",
+      "ad": "Karadeniz Eczanesi",
+      "adres": "Beykoz / İstanbul",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Beykoz",
+      "ad": "Elif Burçak Eczanesi",
+      "adres": "Beykoz / İstanbul",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Beykoz",
+      "ad": "Paşabahçe Eczanesi",
+      "adres": "iletişim, adres, çalışma saatleri ve yol tarifi. Beykoz için 7/24 nöbetçi eczane hizmeti",
       "tarif": "",
       "tel": "",
       "lat": "",
