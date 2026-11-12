@@ -1,9 +1,8 @@
 import json
 import re
+import urllib.request
+import urllib.parse
 from datetime import datetime, timedelta, timezone
-from playwright.sync_api import sync_playwright
-
-eczaneler = []
 
 ilceler = [
     "Adalar", "Arnavutköy", "Ataşehir", "Avcılar", "Bağcılar", "Bahçelievler",
@@ -16,92 +15,96 @@ ilceler = [
 ]
 
 tr_map = str.maketrans("ğüşöçıİ", "gusocii")
+eczaneler = []
 
-with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
-    context = browser.new_context(
-        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        locale="tr-TR"
-    )
-    page = context.new_page()
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/json,*/*"
+}
 
-    # 1. YÖNTEM: İEO sayfasında formu tetikleyip tüm listeyi çekmeyi dene
-    try:
-        page.goto("https://www.istanbuleczaciodasi.org.tr/nobetci-eczane/", wait_until="domcontentloaded", timeout=30000)
-        page.wait_for_timeout(3000)
-
-        # Sayfada arama/listeleme butonu varsa tıkla
-        btn = page.query_selector("button[type='submit'], #btn-ara, .btn-search, button:has-text('Ara'), button:has-text('Listele')")
-        if btn:
-            btn.click()
-            page.wait_for_timeout(4000)
-
-        # Sayfadaki metin bloklarından eczane kartlarını ayıkla
-        body_text = page.inner_text("body")
-        if "ECZANESİ" in body_text.upper():
-            blocks = page.query_selector_all("div, tr, li")
-            seen = set()
-            for b in blocks:
-                t = b.inner_text().strip()
-                if 30 < len(t) < 400 and "ECZANESİ" in t.upper() and ("0 (" in t or "0212" in t or "0216" in t):
-                    lines = [x.strip() for x in t.split("\n") if x.strip()]
-                    ad = next((x for x in lines if "ECZANESİ" in x.upper()), "")
-                    if ad and ad not in seen:
-                        seen.add(ad)
-                        tel = next((x for x in lines if re.search(r'0\s*\(?21[26]\)?', x)), "")
-                        ilce_bul = next((i for i in ilceler if i.lower() in t.lower()), "")
-                        adres_lines = [x for x in lines if x != ad and x != tel and len(x) > 8]
-                        eczaneler.append({
-                            "ilce": ilce_bul,
-                            "ad": ad,
-                            "adres": " ".join(adres_lines[:2]),
-                            "tarif": "",
-                            "tel": tel,
-                            "lat": "",
-                            "lon": ""
-                        })
-    except Exception as e:
-        print("İEO denemesi:", e)
-
-    # 2. YÖNTEM (Garanti Yedek): Gerçek Chromium ile eczaneler.gen.tr ilçe sayfalarını oku
-    if len(eczaneler) < 10:
-        eczaneler = []
-        for ilce in ilceler:
-            slug = ilce.lower().translate(tr_map)
-            url = f"https://www.eczaneler.gen.tr/nobetci-istanbul-{slug}"
-            try:
-                page.goto(url, wait_until="domcontentloaded", timeout=20000)
-                page.wait_for_timeout(800)
-                rows = page.query_selector_all("tr")
-                for row in rows:
-                    isim_el = row.query_selector(".isim")
-                    if not isim_el:
+# 1. KAYNAK: Türkiye Nöbetçi Eczane Açık Sunucu (nobetcieczane.org / eczanebul)
+for ilce in ilceler:
+    slug = ilce.lower().translate(tr_map)
+    urls = [
+        f"https://www.eczanebul.net/istanbul-{slug}-nobetci-eczaneleri",
+        f"https://nobetcieczane.org/istanbul/{slug}"
+    ]
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                html = resp.read().decode("utf-8", errors="ignore")
+                clean = re.sub(r'<script[\s\S]*?</script>|<style[\s\S]*?</style>', ' ', html)
+                blocks = re.split(r'<(?:h2|h3|h4|strong)[^>]*>', clean)
+                found_in_page = False
+                for b in blocks[1:]:
+                    end = b.find('</')
+                    if end == -1:
                         continue
-                    ad = isim_el.inner_text().strip()
-                    if not ad or any(x["ad"] == ad and x["ilce"] == ilce for x in eczaneler):
+                    ad = re.sub(r'<[^>]+>', '', b[:end]).strip()
+                    if "ECZANESİ" not in ad.upper() or len(ad) > 45 or "NÖBETÇİ" in ad.upper():
+                        continue
+                    if any(x["ad"] == ad and x["ilce"] == ilce for x in eczaneler):
                         continue
 
-                    row_text = row.inner_text()
-                    tel_m = re.search(r'(0\s*\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})', row_text)
+                    snippet = re.sub(r'<[^>]+>', ' ', b[end:end+600])
+                    snippet = re.sub(r'\s+', ' ', snippet).strip()
+                    tel_m = re.search(r'(0\s*\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})', snippet)
                     tel = tel_m.group(1).strip() if tel_m else ""
-
-                    lines = [l.strip() for l in row_text.split("\n") if l.strip()]
-                    adres_parts = [l for l in lines if l != ad and (not tel or tel not in l) and "Harita" not in l and ilce.upper() not in l.upper()]
-                    adres = " ".join(adres_parts)
+                    adres = snippet.split(tel)[0].strip() if tel else snippet[:140]
+                    adres = re.sub(r'Harita|Yol Tarifi|Ara|Detay', '', adres).strip(" :-,")
 
                     eczaneler.append({
                         "ilce": ilce,
                         "ad": ad,
-                        "adres": adres,
+                        "adres": adres[:160],
                         "tarif": "",
                         "tel": tel,
                         "lat": "",
                         "lon": ""
                     })
-            except Exception:
-                continue
+                    found_in_page = True
+                if found_in_page:
+                    break
+        except Exception:
+            continue
 
-    browser.close()
+# 2. KAYNAK (Yedek): Arama Motoru İndeksi Üzerinden Doğrudan Çekim (IP Engeli Yoktur)
+if len(eczaneler) < 10:
+    for ilce in ilceler:
+        try:
+            q = urllib.parse.quote(f"İstanbul {ilce} nöbetçi eczane eczanesi tel adres")
+            ddg_url = f"https://html.duckduckgo.com/html/?q={q}"
+            req = urllib.request.Request(ddg_url, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                html = resp.read().decode("utf-8", errors="ignore")
+                snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
+                for s in snippets:
+                    txt = re.sub(r'<[^>]+>', ' ', s)
+                    txt = re.sub(r'\s+', ' ', txt).strip()
+                    matches = re.finditer(r'([A-ZÇĞİÖŞÜ][a-zçğıöşüA-ZÇĞİÖŞÜ\s]{2,25}\s+Eczanesi)', txt)
+                    for m in matches:
+                        ad = m.group(1).strip()
+                        if "nöbetçi" in ad.lower() or len(ad) < 8:
+                            continue
+                        if any(x["ad"].lower() == ad.lower() and x["ilce"] == ilce for x in eczaneler):
+                            continue
+                        after = txt[m.end():m.end()+180]
+                        tel_m = re.search(r'(0\s*\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})', after)
+                        tel = tel_m.group(1).strip() if tel_m else ""
+                        adres = after.split(tel)[0].strip(" :.-,") if tel else after[:110].strip(" :.-,")
+
+                        eczaneler.append({
+                            "ilce": ilce,
+                            "ad": ad,
+                            "adres": adres,
+                            "tarif": "",
+                            "tel": tel,
+                            "lat": "",
+                            "lon": ""
+                        })
+        except Exception:
+            continue
 
 tr_tz = timezone(timedelta(hours=3))
 output = {
