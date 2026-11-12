@@ -8,12 +8,10 @@ from datetime import datetime, timedelta, timezone
 
 tr_tz = timezone(timedelta(hours=3))
 now_tr = datetime.now(tr_tz)
-aylar = ["", "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
-bugun_str = f"{now_tr.day} {aylar[now_tr.month]} {now_tr.year}"
 
 sorgular = [
-    f"İstanbul Beykoz nöbetçi eczane {bugun_str} eczanesi tel adres",
-    f"Beykoz Kavacık nöbetçi eczane {bugun_str} eczanesi adres telefon"
+    "İstanbul Beykoz nöbetçi eczane eczanesi tel adres",
+    "Beykoz Kavacık nöbetçi eczane eczanesi adres telefon"
 ]
 
 eczaneler = []
@@ -31,26 +29,29 @@ for sorgu in sorgular:
         req = urllib.request.Request(ddg_url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as resp:
             raw_html = resp.read().decode("utf-8", errors="ignore")
-            snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', raw_html, re.DOTALL)
-            for s in snippets:
-                txt = html_lib.unescape(re.sub(r'<[^>]+>', ' ', s))
+            blocks = re.findall(r'class="result__body"[^>]*>([\s\S]*?)</div>\s*</div>', raw_html)
+            if not blocks:
+                blocks = re.findall(r'class="result__snippet"[^>]*>([\s\S]*?)</a>', raw_html)
+
+            for b in blocks:
+                txt = html_lib.unescape(re.sub(r'<[^>]+>', ' ', b))
                 txt = re.sub(r'\s+', ' ', txt).strip()
                 matches = re.finditer(r'([A-ZÇĞİÖŞÜ][a-zçğıöşüA-ZÇĞİÖŞÜ\s]{2,25}\s+Eczanesi)', txt)
                 for m in matches:
                     ad = m.group(1).strip()
-                    if any(w in ad.lower() for w in ["nöbetçi", "bugün", "istanbul", "beykoz"]):
+                    if any(w in ad.lower() for w in ["nöbetçi", "bugün", "istanbul", "beykoz", "kavacık"]):
                         continue
                     if len(ad) < 8 or any(x["ad"].lower() == ad.lower() for x in eczaneler):
                         continue
 
-                    after = txt[m.end():m.end()+190]
+                    after = txt[m.end():m.end()+200]
                     tel_m = re.search(r'(0\s*\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2})', after)
                     tel = tel_m.group(1).strip() if tel_m else ""
-                    adres = after.split(tel)[0] if tel else after[:120]
+                    adres = after.split(tel)[0] if tel else after[:130]
                     adres = re.sub(r'Adres\s*:|Telefon\s*:|Tel\s*:|Yol Tarifi Al|—', '', adres).strip(" :.-,")
 
-                    if len(adres) < 10 or "Eczanesi" in adres:
-                        continue
+                    if len(adres) < 8:
+                        adres = "Beykoz / İstanbul"
 
                     eczaneler.append({
                         "ilce": "Beykoz",
