@@ -1,18 +1,5 @@
 {
-  "guncelleme": "2026-11-12 16:06",
-  "kayit_sayisi": 2,
-  "liste": [
-    {
-      "ilce": "Beykoz",
-      "ad": "Paşabahçe Eczanesi",
-      "adres": "İstanbul / Beykoz Adres Paşabahçe Mahallesi Beyaz Erguvan Caddesi 46/A +9",
-      "tel": "02163310074"
-    },
-    {
-      "ilce": "Beykoz",
-      "ad": "902163310074 Kanuni Eczanesi",
-      "adres": "İstanbul / Beykoz Adres Atakent Mahallesi 221. Sokak C18 +9",
-      "tel": "05324548780"
-    }
-  ]
+  "guncelleme": "2026-11-12 16:10",
+  "kayit_sayisi": 0,
+  "liste": []
 }
