@@ -1,5 +1,24 @@
 {
-  "guncelleme": "2026-11-12 14:26",
-  "kayit_sayisi": 0,
-  "liste": []
+  "guncelleme": "2026-11-12 14:28",
+  "kayit_sayisi": 2,
+  "liste": [
+    {
+      "ilce": "Beykoz",
+      "ad": "Topkar Eczanesi",
+      "adres": "Beykoz / İstanbul",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    },
+    {
+      "ilce": "Beykoz",
+      "ad": "Eczane Vildan Eczanesi",
+      "adres": "(1,4 km), Su Eczanesi (2,9 km). Kavacık , Beykoz çevresinde açık eczane adres , telefon ve yol tarifi",
+      "tarif": "",
+      "tel": "",
+      "lat": "",
+      "lon": ""
+    }
+  ]
 }
