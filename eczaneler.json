@@ -1,5 +1,12 @@
 {
-  "guncelleme": "2026-11-12 15:59",
-  "kayit_sayisi": 0,
-  "liste": []
+  "guncelleme": "2026-11-12 16:02",
+  "kayit_sayisi": 1,
+  "liste": [
+    {
+      "ilce": "Beykoz",
+      "ad": "elefon ve konumları Topkar Eczanesi",
+      "adres": "Beykoz Soğuksu Mahallesi, Mehmet Akif Ersoy Caddesi, 103/A Beykoz İstanbul  Al",
+      "tel": "0 (216) 413 06 17"
+    }
+  ]
 }
